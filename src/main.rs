@@ -13,8 +13,8 @@ const CONFIG_DIR: &str = "CFG";
 const CONFIG_FILE: &str = "EF95246C74537DDAFBFC508615B31";
 const PASSPHRASE_FILE: &str = "EF95246C74537DDAFBFC508615B30";
 const DEFAULT_BLOCK_SIZE: u64 = 32 * 1024;
-const DEFAULT_CRYFS_BIN: &str = "/home/user1/.local/opt/cryfs-1.0.3/bin/cryfs";
-const DEFAULT_CRYFS_UNMOUNT_BIN: &str = "/home/user1/.local/opt/cryfs-1.0.3/bin/cryfs-unmount";
+const DEFAULT_CRYFS_BIN: &str = "cryfs";
+const DEFAULT_CRYFS_UNMOUNT_BIN: &str = "cryfs-unmount";
 
 #[derive(Debug, Parser)]
 #[command(

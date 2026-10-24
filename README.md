@@ -39,14 +39,14 @@ sudo install -m 0755 target/release/cryfs-gpg /usr/bin/cryfs-gpg-r
 
 ## CryFS configuration
 
-By default, the application uses:
+By default, the application searches for these commands in `PATH`:
 
 ```text
-/home/user1/.local/opt/cryfs-1.0.3/bin/cryfs
-/home/user1/.local/opt/cryfs-1.0.3/bin/cryfs-unmount
+cryfs
+cryfs-unmount
 ```
 
-To use another installation:
+To explicitly use CryFS 1.0.3 or another installation:
 
 ```bash
 export CRYFS_BIN=/path/to/cryfs
