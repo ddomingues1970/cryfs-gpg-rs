@@ -1,63 +1,59 @@
 # cryfs-gpg-rs
 
-Aplicação Rust para montar sistemas de arquivos CryFS protegendo a configuração e a senha do CryFS com GnuPG.
+Rust application for mounting CryFS filesystems while protecting the CryFS configuration and password with GnuPG.
 
-O projeto é a migração do `cryfs-gpg` original, escrito em C. Ele mantém a mesma ideia de segurança: a configuração e a senha usadas pelo CryFS são criptografadas com uma chave pública GPG e só são recuperadas durante a montagem, usando a chave privada correspondente.
+This project is the migration of the original C-based `cryfs-gpg` application. It preserves the same security model: the CryFS configuration and password are encrypted with a GPG public key and recovered only during mounting using the corresponding private key.
 
-## Principais melhorias
+## Main improvements
 
-- Migração de C para Rust, com verificação de tipos e gerenciamento seguro de memória.
-- Uso explícito do CryFS 1.0.3 por padrão.
-- Caminho do CryFS configurável por `CRYFS_BIN`.
-- Caminho do `cryfs-unmount` configurável por `CRYFS_UNMOUNT_BIN`.
-- Tamanho de bloco configurável com `--blocksize`.
-- Desmontagem integrada com `--unmount`.
-- Desmontagem idempotente: não falha quando o diretório já está desmontado.
-- Interface de linha de comando documentada automaticamente pelo `clap`.
-- Tratamento de erros mais claro e ausência de manipulação manual de memória da aplicação.
+- Migrated from C to Rust, with compile-time type checking and safer memory management.
+- Explicit support for CryFS 1.0.3 by default.
+- Configurable CryFS path through `CRYFS_BIN`.
+- Configurable `cryfs-unmount` path through `CRYFS_UNMOUNT_BIN`.
+- Configurable block size through `--blocksize`.
+- Integrated unmount command through `--unmount`.
+- Idempotent unmounting: it succeeds when the mount point is already unmounted.
+- Command-line interface documented automatically by `clap`.
+- Clearer error handling and no manual application-level memory management.
 
-## Requisitos
+## Requirements
 
-- Linux com suporte a FUSE.
+- Linux with FUSE support.
 - CryFS 1.0.3.
-- GnuPG com uma chave pública para o destinatário e a chave privada correspondente para montagem posterior.
-- Rust e Cargo para compilar o projeto.
+- GnuPG with a public key for the recipient and the corresponding private key for later mounts.
+- Rust and Cargo to build the project.
 
-## Compilação
+## Building
 
 ```bash
 cargo build --release
 ```
 
-O executável será criado em:
+The executable is created at `target/release/cryfs-gpg`.
 
-```text
-target/release/cryfs-gpg
-```
-
-Exemplo de instalação com um nome separado da versão C:
+Install it separately from the C version:
 
 ```bash
 sudo install -m 0755 target/release/cryfs-gpg /usr/bin/cryfs-gpg-r
 ```
 
-## Configuração do CryFS
+## CryFS configuration
 
-Por padrão, a aplicação usa:
+By default, the application uses:
 
 ```text
 /home/user1/.local/opt/cryfs-1.0.3/bin/cryfs
 /home/user1/.local/opt/cryfs-1.0.3/bin/cryfs-unmount
 ```
 
-Para usar outro local:
+To use another installation:
 
 ```bash
-export CRYFS_BIN=/caminho/para/cryfs
-export CRYFS_UNMOUNT_BIN=/caminho/para/cryfs-unmount
+export CRYFS_BIN=/path/to/cryfs
+export CRYFS_UNMOUNT_BIN=/path/to/cryfs-unmount
 ```
 
-## Criar e montar um novo volume
+## Creating and mounting a new volume
 
 ```bash
 mkdir -p ~/dropbox/basedir ~/dropbox/mountdir
@@ -65,12 +61,12 @@ mkdir -p ~/dropbox/basedir ~/dropbox/mountdir
 cryfs-gpg-r \
   --basedir ~/dropbox/basedir \
   --mountdir ~/dropbox/mountdir \
-  --recipient seu-email@example.com
+  --recipient your-email@example.com
 ```
 
-O parâmetro `--recipient` é necessário na primeira criação, pois a configuração e a senha do CryFS serão criptografadas para essa chave GPG.
+The `--recipient` option is required when creating a volume for the first time because the CryFS configuration and password are encrypted for that GPG key.
 
-Depois da criação inicial, a montagem pode ser feita com:
+Mount an existing volume with:
 
 ```bash
 cryfs-gpg-r \
@@ -78,56 +74,56 @@ cryfs-gpg-r \
   --mountdir ~/dropbox/mountdir
 ```
 
-## Desmontar
+## Unmounting
 
 ```bash
 cryfs-gpg-r --unmount --mountdir ~/dropbox/mountdir
 ```
 
-O comando também pode ser executado quando o diretório já estiver desmontado.
+The command also succeeds when the directory is already unmounted.
 
-## Uso com armazenamento em nuvem
+## Cloud storage
 
-Os arquivos dentro de `basedir` permanecem criptografados pelo CryFS e podem ser sincronizados com ferramentas como o rclone:
+Files inside `basedir` remain encrypted by CryFS and can be synchronized with tools such as rclone:
 
 ```bash
 rclone sync ~/dropbox/basedir remote:cryfs-backup
 ```
 
-Os arquivos devem ser acessados normalmente através de `mountdir`. Não sincronize a pasta montada; sincronize somente a pasta criptografada `basedir`.
+Access files through `mountdir`. Do not synchronize the mounted directory; synchronize only the encrypted `basedir` directory.
 
-## Migração da versão C
+## Migration from the C version
 
-Antes de migrar, faça backup dos dados acessados pelo volume antigo e preserve a base criptografada original. A migração recomendada é:
+Before migrating, back up the data accessed through the old volume and preserve the original encrypted base:
 
-1. Montar o volume com a versão C.
-2. Copiar os dados descriptografados para dois locais de backup.
-3. Desmontar o volume antigo.
-4. Preservar a base criptografada antiga em um diretório separado.
-5. Criar uma nova base vazia para o CryFS 1.0.3.
-6. Montar a nova base com `cryfs-gpg-r`.
-7. Restaurar os dados dos backups para o novo volume.
-8. Validar leitura, gravação e desmontagem antes de remover qualquer backup.
+1. Mount the volume with the C version.
+2. Copy the decrypted data to two independent backup locations.
+3. Unmount the old volume.
+4. Preserve the old encrypted base in a separate directory.
+5. Create an empty base for CryFS 1.0.3.
+6. Mount the new base with `cryfs-gpg-r`.
+7. Restore the data from the backups into the new volume.
+8. Validate reading, writing, and unmounting before removing any backup.
 
-Não apague a base antiga até confirmar que a nova montagem e os backups estão íntegros.
+Do not delete the old base until the new mount and all backups have been verified.
 
-## Segurança
+## Security
 
-A aplicação não armazena a senha do CryFS em texto claro na base. A configuração e a senha são criptografadas com GnuPG e recuperadas somente durante a montagem.
+The application does not store the CryFS password in plain text inside the encrypted base. The configuration and password are encrypted with GnuPG and recovered only during mounting.
 
-A segurança final depende da proteção da chave privada GPG, da senha dessa chave, das permissões do sistema e dos backups. A aplicação não substitui uma política de backup ou o gerenciamento seguro das chaves.
+Overall security depends on protecting the GPG private key, its passphrase, filesystem permissions, and backups. This application does not replace a backup policy or secure key management.
 
 ## Status
 
-O fluxo principal foi validado com CryFS 1.0.3:
+The main workflow has been validated with CryFS 1.0.3:
 
-- criação de volume;
-- montagem;
-- gravação e leitura de arquivos;
-- desmontagem integrada;
-- restauração dos dados a partir de backup;
-- execução com blocksize de 32768 bytes.
+- volume creation;
+- mounting;
+- file writing and reading;
+- integrated unmounting;
+- restoring data from backup;
+- operation with a 32768-byte block size.
 
-## Licença
+## License
 
-Consulte o arquivo `LICENSE` da versão original para as condições de distribuição do projeto.
+See the `LICENSE` file from the original version for the project's distribution terms.
