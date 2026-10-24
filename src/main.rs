@@ -19,7 +19,7 @@ const DEFAULT_CRYFS_UNMOUNT_BIN: &str = "cryfs-unmount";
 #[derive(Debug, Parser)]
 #[command(
     name = "cryfs-gpg",
-    about = "Monta um sistema CryFS protegido por GnuPG"
+    about = "Mount a CryFS filesystem protected by GnuPG"
 )]
 struct Options {
     #[arg(short = 'b', long = "basedir", required_unless_present = "unmount")]
@@ -46,7 +46,7 @@ fn main() -> Result<()> {
     let basedir = options.basedir.as_ref().unwrap();
 
     let config_dir = basedir.join(CONFIG_DIR);
-    std::fs::create_dir_all(&config_dir).context("criando diretório CFG")?;
+    std::fs::create_dir_all(&config_dir).context("creating CFG directory")?;
 
     let encrypted_config = config_dir.join(CONFIG_FILE);
     let encrypted_passphrase = config_dir.join(PASSPHRASE_FILE);
@@ -64,23 +64,23 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    let config = tempfile::NamedTempFile::new().context("criando configuração temporária")?;
+    let config = tempfile::NamedTempFile::new().context("creating temporary configuration")?;
     decrypt_to_path(&encrypted_config, config.path(), &options.recipients)?;
     mount(&options, config.path(), &passphrase)?;
     Ok(())
 }
 
 fn generate_passphrase() -> Result<String> {
-    let username = std::env::var("USER").context("variável USER não definida")?;
+    let username = std::env::var("USER").context("USER environment variable is not set")?;
     let seed = tempfile::NamedTempFile::new()?
         .path()
         .to_string_lossy()
         .into_owned();
     let salt = CString::new(format!("$6${username}")).context("salt inválido")?;
-    let password = CString::new(seed).context("senha inválida")?;
+    let password = CString::new(seed).context("invalid password")?;
     let result = unsafe { crypt(password.as_ptr(), salt.as_ptr()) };
     if result.is_null() {
-        bail!("não foi possível gerar a senha SHA-512");
+        bail!("could not generate the SHA-512 password");
     }
     Ok(unsafe { CStr::from_ptr(result) }
         .to_string_lossy()
@@ -89,7 +89,7 @@ fn generate_passphrase() -> Result<String> {
 
 fn encrypt_file(data: &str, destination: &Path, recipients: &[String]) -> Result<()> {
     if recipients.is_empty() {
-        bail!("informe ao menos um destinatário GPG com --recipient");
+        bail!("provide at least one GPG recipient with --recipient");
     }
     let mut command = Command::new("gpg");
     command.args(["--batch", "--yes", "--trust-model", "always", "--encrypt"]);
@@ -102,12 +102,12 @@ fn encrypt_file(data: &str, destination: &Path, recipients: &[String]) -> Result
         .stdin(Stdio::piped());
     let mut child = command
         .spawn()
-        .context("executando gpg para criptografia")?;
+        .context("running gpg for encryption")?;
     child.stdin.take().unwrap().write_all(data.as_bytes())?;
     let output = child.wait_with_output()?;
     if !output.status.success() {
         bail!(
-            "gpg falhou ao criptografar: {}",
+            "gpg encryption failed: {}",
             String::from_utf8_lossy(&output.stderr)
         );
     }
@@ -118,7 +118,7 @@ fn encrypt_file(data: &str, destination: &Path, recipients: &[String]) -> Result
 fn decrypt_file(source: &Path, recipients: &[String]) -> Result<String> {
     let output = gpg_decrypt(source, recipients)?;
     let output = output.split(|byte| *byte == 0).next().unwrap_or_default();
-    String::from_utf8(output.to_vec()).context("arquivo descriptografado não é UTF-8")
+    String::from_utf8(output.to_vec()).context("decrypted file is not UTF-8")
 }
 
 fn decrypt_to_path(source: &Path, destination: &Path, recipients: &[String]) -> Result<()> {
@@ -131,13 +131,13 @@ fn gpg_decrypt(source: &Path, _recipients: &[String]) -> Result<Vec<u8>> {
         .args(["--batch", "--yes", "--decrypt"])
         .arg(source)
         .output()
-        .context("executando gpg para descriptografia")?;
-    // Os arquivos do formato original são preenchidos/truncados em 32 KiB.
-    // O GPG pode emitir a mensagem "invalid packet" pelos bytes finais, mas
-    // ainda entregar corretamente o conteúdo descriptografado em stdout.
+        .context("running gpg for decryption")?;
+    // Files in the original format are padded/truncated to 32 KiB.
+    // GPG may report "invalid packet" for trailing bytes while still
+    // correctly returning the decrypted content on stdout.
     if !output.status.success() && output.stdout.is_empty() {
         bail!(
-            "gpg falhou ao descriptografar: {}",
+            "gpg decryption failed: {}",
             String::from_utf8_lossy(&output.stderr)
         );
     }
@@ -172,12 +172,12 @@ fn create_config(
         .stderr(Stdio::inherit())
         .spawn()
         .context("iniciando cryfs")?;
-    let mut input = child.stdin.take().context("abrindo entrada do cryfs")?;
+    let mut input = child.stdin.take().context("opening cryfs stdin")?;
     input.write_all(format!("{passphrase}\n{passphrase}\n").as_bytes())?;
     drop(input);
-    let status = child.wait().context("aguardando cryfs")?;
+    let status = child.wait().context("waiting for cryfs")?;
     if !status.success() && status.code() != Some(2) {
-        bail!("cryfs terminou durante a criação da configuração com {status}");
+        bail!("cryfs exited while creating the configuration with {status}");
     }
     encrypt_file_from_path(&temporary, encrypted_config, &options.recipients)?;
     Ok(())
@@ -185,7 +185,7 @@ fn create_config(
 
 fn encrypt_file_from_path(source: &Path, destination: &Path, recipients: &[String]) -> Result<()> {
     if recipients.is_empty() {
-        bail!("informe ao menos um destinatário GPG com --recipient");
+        bail!("provide at least one GPG recipient with --recipient");
     }
     let mut command = Command::new("gpg");
     command.args(["--batch", "--yes", "--trust-model", "always", "--encrypt"]);
@@ -197,10 +197,10 @@ fn encrypt_file_from_path(source: &Path, destination: &Path, recipients: &[Strin
         .arg(destination)
         .arg(source)
         .output()
-        .context("executando gpg para criptografar a configuração")?;
+        .context("running gpg to encrypt the configuration")?;
     if !output.status.success() {
         bail!(
-            "gpg falhou ao criptografar a configuração: {}",
+            "gpg failed to encrypt the configuration: {}",
             String::from_utf8_lossy(&output.stderr)
         );
     }
@@ -228,22 +228,22 @@ fn mount(options: &Options, config: &Path, passphrase: &str) -> Result<()> {
         .write_all(format!("{passphrase}\n").as_bytes())?;
     let status = child.wait()?;
     if !status.success() {
-        bail!("cryfs terminou com {status}");
+        bail!("cryfs exited with {status}");
     }
     Ok(())
 }
 
 fn validate(options: &Options) -> Result<()> {
-    let basedir = options.basedir.as_ref().context("basedir é obrigatório")?;
+    let basedir = options.basedir.as_ref().context("basedir is required")?;
     if !basedir.is_dir() {
         bail!(
-            "basedir não existe ou não é diretório: {}",
+            "basedir does not exist or is not a directory: {}",
             basedir.display()
         );
     }
     if !options.mountdir.is_dir() {
         bail!(
-            "mountdir não existe ou não é diretório: {}",
+            "mountdir does not exist or is not a directory: {}",
             options.mountdir.display()
         );
     }
@@ -257,7 +257,7 @@ fn unmount(mountdir: &Path) -> Result<()> {
         .arg("-q")
         .arg(mountdir)
         .status()
-        .context("verificando se o diretório está montado")?;
+        .context("checking whether the directory is mounted")?;
     if !mounted.success() {
         return Ok(());
     }
@@ -265,9 +265,9 @@ fn unmount(mountdir: &Path) -> Result<()> {
     let status = Command::new(cryfs_unmount_bin())
         .arg(mountdir)
         .status()
-        .context("executando cryfs-unmount")?;
+        .context("running cryfs-unmount")?;
     if !status.success() {
-        bail!("cryfs-unmount terminou com {status}");
+        bail!("cryfs-unmount exited with {status}");
     }
     Ok(())
 }
@@ -276,9 +276,9 @@ fn require_command(path: &str) -> Result<()> {
     let status = Command::new(path)
         .arg("--version")
         .status()
-        .with_context(|| format!("{path} não está instalado ou não pode ser executado"))?;
+        .with_context(|| format!("{path} is not installed or cannot be executed"))?;
     if !status.success() {
-        bail!("{path} não respondeu corretamente a --version");
+        bail!("{path} did not respond correctly to --version");
     }
     Ok(())
 }
