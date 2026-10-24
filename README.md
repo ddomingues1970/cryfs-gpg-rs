@@ -126,4 +126,5 @@ The main workflow has been validated with CryFS 1.0.3:
 
 ## License
 
-See the `LICENSE` file from the original version for the project's distribution terms.
+This project is licensed under the GNU General Public License, version 3 only
+(`GPL-3.0-only`). See the `LICENSE` file for the complete terms.
