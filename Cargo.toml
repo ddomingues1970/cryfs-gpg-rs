@@ -1,0 +1,11 @@
+[package]
+name = "cryfs-gpg"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+libc = "0.2"
+tempfile = "3"
+
